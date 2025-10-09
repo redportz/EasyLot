@@ -11,7 +11,7 @@ model = YOLO('yolov8s.pt')
 names = model.names
 
 # ---------------- Input ----------------
-input_source = "0"
+input_source = "0" #change from 0 to file name if reading a file
 is_image = isinstance(input_source, str) and input_source.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff'))
 
 if is_image:
