@@ -3,7 +3,7 @@ main{
 }
 
 #ul-container{
-    background: #0F4861;
+    background: var(--button-color);
     width: 700px;
     justify-self: center;
     align-content: center;

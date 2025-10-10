@@ -2,8 +2,8 @@
     --navbar-bg: #46B1E1;
     --background-color: #EAE0D5; /* Light Gray (Main Background) */
     --text-color: white; /* White (Main Text) */
-    --button-color: #D00000; /* Deep Red (Logout & Primary Actions) */
-    --button-hover: #B00000; /* Slightly Darker Red (Button Hover) */
+    --button-color: #0F4861; /* Deep Red (Logout & Primary Actions) */
+    --button-hover: #133b4d; /* Slightly Darker Red (Button Hover) */
     --primary-color: #156082; /* Bright Blue (Login Button) */
     --secondary-color: #1E88B8; /* Darker Blue (Login Hover) */
     --hover-color: #FFBA08; /* Warm Yellow (Hover Effects) */

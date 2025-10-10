@@ -54,23 +54,19 @@ header #middle-topbar{
 
 }
 
-.create-account-btn:hover {
-    background-color: var(--login-hover);
-}
-
-#login-btn i , #logout-btn i{
+#login-btn i , #logout-btn i, #home-btn i{
     font-size: 70px;
     margin-right: 10px;
     margin-left: 10px;
     vertical-align: bottom;
 }
 
-#login-btn i{
-    color: var(--login-btn);
+#login-btn i,#home-btn i{
+    color: var(--button-color);
 }
 
-#login-btn i:hover{
-    color: var(--login-hover);
+#login-btn i:hover, #home-btn:hover{
+    color: var(--button-hover);
 }
 
 #logout-btn i{
@@ -89,4 +85,12 @@ footer{
 #Copyright-container{
     justify-self: center;
     font-size: 20px;
+}
+#Copyright-container a{
+    font-size: 25px;
+    color: #082f41;
+}
+#Copyright-container a:hover{
+    font-size: 25px;
+    color: #021924;
 }
