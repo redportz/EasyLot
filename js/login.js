@@ -1,4 +1,3 @@
-import config from "./config.js";
 document.getElementById("login-form").addEventListener("submit", async function(event) {
     event.preventDefault(); // Prevent default form submission
 
@@ -6,8 +5,9 @@ document.getElementById("login-form").addEventListener("submit", async function(
     const enteredPassword = document.getElementById("password").value;
     let user=null;
 
+    const useRealAPI=false;
 
-    if (!config.useRealAPI) {
+    if (!useRealAPI) {
         const users = [
             { Username: "admin", Password: "supersecret", role: "Admin" },
         ];
@@ -57,7 +57,7 @@ function handleLoginSuccess(user) {
     // Redirect based on role
     switch (user.role) {
         case "Admin":
-            window.location.href = "../admin/Dashboard.html";
+            window.location.href = "./admin/homePage.html";
             break;
         default:
             alert("Unknown role. Please contact support.");

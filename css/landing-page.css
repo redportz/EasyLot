@@ -40,14 +40,19 @@ ul > li {
     border-bottom: 2px solid black;
     position: relative;
 }
-
-ul > li .arrow {
+ul > li .arrow, ul > li .edit{
     position: absolute;
     right:10px;
     font: 16px;
-    transform: rotate(180deg);
     color: white;
 }
+
+ul > li .arrow {
+    transform: rotate(180deg);
+
+}
+
+
 
 ul > li.location.open .arrow {
     transform: rotate(0);
