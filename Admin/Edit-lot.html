@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://kit.fontawesome.com/1ba04f7b66.js" crossorigin="anonymous"></script>
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.png" />
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/top-bar.css">
+    <link rel="stylesheet" href="/css/live-feed.css">
+
+    <title>EasyLot</title>
+</head>
+<body>
+        <header>
+        <div id="left-topbar">
+            <a id="EasyLot-logo" ><img src="/assets/logo.png" alt="EasyLot Logo"></a>
+        </div>
+        <div id="middle-topbar">
+            <p id="EasyLot">EasyLot</p>
+        </div>
+        <div id="right-topbar">
+            <a id="login-btn" title="Log in" href="/login-page.html"><i class="fa-solid fa-right-to-bracket"></i></a>
+        </div>
+    </header>
+
+    <main>
+        <!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>EasyLot – Polygon Admin</title>
+
+</head>
+<body>
+  <h1>EasyLot – Polygon Admin</h1>
+
+  <div id="toolbar">
+    <button id="btnUndoPoint">Undo Point</button>
+    <button id="btnUndoPoly">Undo Polygon</button>
+    <button id="btnClear">Clear All (local)</button>
+    <button id="btnReload">Reload from Server</button>
+    <button id="btnSave">Save to Server</button>
+    <span id="msg"></span>
+  </div>
+<div id="zoomBar">
+    <button id="minus" type="button">−</button>
+    <input id="range" type="range" min="25" max="200" value="75" step="5" />
+    <button id="plus"  type="button">+</button>
+    <span id="zoomPct">75%</span>
+</div>
+
+<div id="stage">
+    <img id="stream" src="http://127.0.0.1:5000/video_feed" alt="Live stream" />
+    <canvas id="lot" width="1280" height="720"></canvas>
+</div>
+
+
+
+  <div class="hint">
+    Click the for coners in this order:<br>
+    <b>TOP LEFT, TOP RIGHT, BOTTOM RIGHT BOTTOM LEFT.</b>
+    <br/>Backend: <code id="backendUrlText"></code>
+  </div>
+
+
+  <footer id="footer">
+        <div id="Copyright-container">
+            Copyright &copy; Eric Zabala & Emily Kisor. <a target="_blank" href="https://github.com/redportz/EasyLot"><i class="fa-brands fa-square-github"></i> </a>
+        </div>
+    </footer>
+
+  
+    <script src="/js/edit-lot.js"></script>
+    <script src="/js/display-video.js"></script>
+    
+
+</body>
+</html>

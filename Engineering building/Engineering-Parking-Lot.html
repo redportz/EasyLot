@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://kit.fontawesome.com/1ba04f7b66.js" crossorigin="anonymous"></script>
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.png" />
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/top-bar.css">
+
+
+    <title>EasyLot</title>
+</head>
+<body>
+        <header>
+        <div id="left-topbar">
+            <a id="EasyLot-logo" href="/" ><img src="/assets/logo.png" alt="EasyLot Logo"></a>
+        </div>
+        <div id="middle-topbar">
+            <p id="EasyLot">EasyLot</p>
+        </div>
+        <div id="right-topbar">
+            <a id="home-btn" title="Home" href="/index.html"><i class="fa-solid fa-house"></i></a>
+            <a id="login-btn" title="Log in" href="/login-page.html"><i class="fa-solid fa-right-to-bracket"></i></a>
+        </div>
+    </header>
+
+    <main>
+        <div class="wrap">
+    <h1>EasyLot – Live Feed</h1>
+
+    <div class="statusbar">
+      <span id="lotStatus" class="pill ok">Loading…</span>
+      <div class="counts">
+        <span>Free: <b id="free">—</b></span>
+        <span>Full: <b id="full">—</b></span>
+        <span>Total: <b id="total">—</b></span>
+      </div>
+      <span id="updated" style="margin-left:auto;font-size:12px;color:#666;">—</span>
+    </div>
+
+    <div class="stage">
+      <img id="stream" alt="Live stream" />
+    </div>
+
+    <div class="note">
+      Backend: <code id="backendUrlText"></code>. This page is read-only.
+    </div>
+  </div>
+        
+    </main>
+
+    <footer id="footer">
+        <div id="Copyright-container">
+            Copyright &copy; Eric Zabala & Emily Kisor. <a target="_blank" href="https://github.com/redportz/EasyLot"><i class="fa-brands fa-square-github"></i> </a>
+        </div>
+    </footer>
+    <script src="/js/rotate-arrows.js"></script>
+    <script src=""></script>
+</body>
+</html>

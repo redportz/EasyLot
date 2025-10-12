@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>EasyLot – Polygon Admin</title>
+  <style>
+    :root {
+      /* IMPORTANT: match these to your Flask server FRAME_W/FRAME_H */
+      --w: 1280;
+      --h: 720;
+    }
+    body { font-family: system-ui, sans-serif; margin: 16px; }
+    #toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; flex-wrap: wrap; }
+    button { padding:8px 12px; }
+    #msg { margin-left:8px; }
+    #stage { position: relative; width: calc(var(--w) * 1px); height: calc(var(--h) * 1px); }
+    #stream { position:absolute; left:0; top:0; width:100%; height:100%; object-fit: contain; }
+    #lot    { position:absolute; left:0; top:0; width:100%; height:100%; }
+    .hint { color:#666; font-size:14px; margin-top:6px; }
+  </style>
+</head>
+<body>
+  <h1>EasyLot – Polygon Admin</h1>
+
+  <div id="toolbar">
+    <button id="btnUndoPoint">Undo Point</button>
+    <button id="btnUndoPoly">Undo Polygon</button>
+    <button id="btnClear">Clear All (local)</button>
+    <button id="btnReload">Reload from Server</button>
+    <button id="btnSave">Save to Server</button>
+    <span id="msg"></span>
+  </div>
+
+  <div id="stage">
+    <!-- Live MJPEG stream from Flask -->
+    <img id="stream" src="" alt="Live stream"/>
+    <!-- Transparent drawing canvas (same pixel size as server frames) -->
+    <canvas id="lot" width="1280" height="720"></canvas>
+  </div>
+
+  <div class="hint">
+    Click 4 times to add a slot (quad). The canvas overlays the live stream, so coordinates match.
+    <br/>Backend: <code id="backendUrlText"></code>
+  </div>
+
+<script>
+
+</script>
+
+</body>
+</html>
