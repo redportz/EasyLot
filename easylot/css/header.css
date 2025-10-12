@@ -1,0 +1,73 @@
+header {
+  display: flex;
+  justify-content: space-between; /* space out left/middle/right */
+  align-items: center;
+  padding: 0.8rem 2rem;
+  background-color: #0f172a; /* dark navy-blue look */
+  color: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Left section (logo) */
+#left img {
+  height: 50px;
+  width: auto;
+  transition: transform 0.2s ease-in-out;
+}
+
+#left img:hover {
+  transform: scale(1.05);
+}
+
+/* Middle section (nav links or title) */
+#middle {
+  flex: 1;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Right section (buttons) */
+#right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Buttons or links */
+#right a,
+#middle a {
+  color: white;
+  text-decoration: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  transition: background 0.3s;
+}
+
+#right a:hover,
+#middle a:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  #left,
+  #middle,
+  #right {
+    margin: 0.3rem 0;
+  }
+
+  #right {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}

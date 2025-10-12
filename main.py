@@ -1,217 +1,171 @@
-import cv2
-import json
-import os
-import cvzone
-import numpy as np
+import os, time, threading, json
+import cv2, numpy as np, cvzone
+from flask import Flask, jsonify, request, abort, Response
+from flask_cors import CORS
 from ultralytics import YOLO
-import time
 
-# ---------------- YOLO Model ----------------
-model = YOLO('yolov8s.pt')
-names = model.names
+# ---------------- Config ----------------
+POLYGON_FILE = "polygon.json"
+MODEL_PATH   = "yolov8s.pt"   # or your best.pt
+FRAME_W, FRAME_H = 1280, 720  # reduce if you need more FPS
 
-# ---------------- Input ----------------
-input_source = "0" #change from 0 to file name if reading a file
-is_image = isinstance(input_source, str) and input_source.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff'))
+# ---------------- App ----------------
+app = Flask(__name__)
+CORS(app)
 
-if is_image:
-    frame = cv2.imread(input_source)
-    if frame is None:
-        raise FileNotFoundError(f"{input_source} not found in current directory.")
-else:
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        raise ValueError(f"Cannot open video source {input_source}")
-
-# ---------------- Polygon Setup ----------------
-polygon_points = []
+# ---------------- State ----------------
 polygons = []
-polygon_file = "polygon.json"
-drawing_mode = False  # A pressed → editing enabled
+latest_counts = {"free": 0, "full": 0, "total": 0}
+latest_jpeg = None
+jpeg_lock = threading.Lock()
+running = True
 
-# ---------------- Popup System ----------------
-popup_message = ""
-popup_time = 0
-
-def show_popup(message, duration=2):
-    global popup_message, popup_time
-    popup_message = message
-    popup_time = time.time() + duration
-
-# Load saved polygons
-if os.path.exists(polygon_file):
+# ---------------- Load/save polygons ----------------
+def load_polygons():
+    global polygons
     try:
-        with open(polygon_file, 'r') as f:
+        with open(POLYGON_FILE, "r") as f:
             polygons = json.load(f)
-    except (json.JSONDecodeError, ValueError):
+    except Exception:
         polygons = []
-        with open(polygon_file, 'w') as f:
+        with open(POLYGON_FILE, "w") as f:
             json.dump(polygons, f)
 
 def save_polygons():
-    with open(polygon_file, 'w') as f:
+    with open(POLYGON_FILE, "w") as f:
         json.dump(polygons, f)
 
-# ---------------- Mouse Callback ----------------
-def RGB(event, x, y, flags, param):
-    global polygon_points, polygons
-    if not drawing_mode:  # Only allow adding points if A was pressed
-        return
-    if event == cv2.EVENT_LBUTTONDOWN:
-        polygon_points.append((x, y))
-        if len(polygon_points) == 4:
-            polygons.append(polygon_points.copy())
-            save_polygons()
-            polygon_points.clear()
-            show_popup("Polygon Added")
+load_polygons()
 
-# ---------------- Load Logo ----------------
-logo = cv2.imread("raw.PNG", cv2.IMREAD_UNCHANGED)
-if logo is None:
-    raise FileNotFoundError("raw.PNG not found")
-logo = cv2.resize(logo, (190, 190))
+# ---------------- YOLO + camera ----------------
+model = YOLO(MODEL_PATH)
 
-def overlay_logo(frame, logo, margin=10):
-    h_logo, w_logo = logo.shape[:2]
-    h_frame, w_frame = frame.shape[:2]
-    x = w_frame - w_logo - margin
-    y = h_frame - h_logo - margin
-    if logo.shape[2] == 4:
-        b, g, r, a = cv2.split(logo)
-        overlay_color = cv2.merge((b, g, r))
-        mask = cv2.merge((a, a, a)) / 255.0
-        roi = frame[y:y+h_logo, x:x+w_logo]
-        frame[y:y+h_logo, x:x+w_logo] = (overlay_color * mask + roi * (1 - mask)).astype(np.uint8)
-    else:
-        frame[y:y+h_logo, x:x+w_logo] = logo
+# Windows tip: CAP_DSHOW often fixes camera issues. Try index 0 then 1.
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+if not cap.isOpened():
+    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+if not cap.isOpened():
+    raise RuntimeError("Cannot open any camera (tried indexes 0 and 1).")
 
-# ---------------- Create Resizable Window ----------------
-cv2.namedWindow('RGB Camera 1', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('RGB Camera 1', 2000, 1300)
-cv2.setMouseCallback('RGB Camera 1', RGB)
 
-# ---------------- Main Loop ----------------
-paused_frame = None  # Store a single frame when drawing
+# ---------------- Worker: process frames continuously ----------------
+def worker():
+    last_poly_check = 0
+    encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
 
-while True:
-    if drawing_mode:
-        # Pause live feed: use the last captured frame
-        if paused_frame is None:
-            if not is_image:
-                ret, paused_frame = cap.read()
-                if not ret:
-                    break
-                frame = cv2.resize(frame, (2000, 1300))  # resize immediately
-            else:
-                frame = cv2.resize(frame, (2000, 1300))
-            paused_frame = frame.copy()
-        frame = paused_frame.copy()
-    else:
-        paused_frame = None  # Reset paused frame when editing ends
-        if not is_image:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frame = cv2.resize(frame, (2000, 1300))
-        else:
-            frame = cv2.resize(frame, (2000, 1300))
+    while running:
+        ok, frame = cap.read()
+        if not ok:
+            time.sleep(0.02)
+            continue
 
-    # YOLO tracking only runs when not paused
-    if not drawing_mode:
+        frame = cv2.resize(frame, (FRAME_W, FRAME_H))
+
+        # hot-reload polygons every 2s (so admin updates apply)
+        now = time.time()
+        if now - last_poly_check > 2.0:
+            load_polygons()
+            last_poly_check = now
+
+        # detect/track cars (COCO class 2)
         results = model.track(frame, persist=True, classes=[2], conf=0.25)
-    else:
-        results = []  # Skip detection while drawing
 
-    overlay = frame.copy()
-    full_spots = 0
-    filled_status = [False] * len(polygons)
+        overlay = frame.copy()
+        full_spots = 0
+        total_spots = len(polygons)
+        filled_status = [False] * total_spots
 
-    if not drawing_mode and results and results[0].boxes.id is not None:
-        ids = results[0].boxes.id.cpu().numpy().astype(int)
-        boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
-        class_ids = results[0].boxes.cls.int().cpu().tolist()
-        for track_id, box, class_id in zip(ids, boxes, class_ids):
-            x1, y1, x2, y2 = box
-            cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
-            corners = [(x1, y1), (x2, y1), (x2, y2), (x1, y2), (cx, cy)]
-            for i, poly in enumerate(polygons):
-                pts = np.array(poly, np.int32).reshape((-1, 1, 2))
-                if any(cv2.pointPolygonTest(pts, (float(c[0]), float(c[1])), False) >= 0 for c in corners):
-                    filled_status[i] = True
-                    full_spots += 1
-                    break
+        if results and results[0].boxes.id is not None:
+            boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
+            for (x1, y1, x2, y2) in boxes:
+                cx, cy = int((x1+x2)/2), int((y1+y2)/2)
+                corners = [(x1,y1),(x2,y1),(x2,y2),(x1,y2),(cx,cy)]
+                for i, poly in enumerate(polygons):
+                    pts = np.array(poly, np.int32).reshape((-1,1,2))
+                    if any(cv2.pointPolygonTest(pts, (float(px), float(py)), False) >= 0 for (px,py) in corners):
+                        if not filled_status[i]:
+                            filled_status[i] = True
+                            full_spots += 1
+                        break
 
-    # Draw polygons and overlay, same as before
-    for i, poly in enumerate(polygons):
-        pts = np.array(poly, np.int32).reshape((-1, 1, 2))
-        color = (0, 255, 0) if not filled_status[i] else (0, 0, 255)
-        cv2.fillPoly(overlay, [pts], color)
-        cv2.polylines(frame, [pts], True, (255, 255, 255), 2)
+        # draw polygons
+        for i, poly in enumerate(polygons):
+            pts = np.array(poly, np.int32).reshape((-1,1,2))
+            color = (0,255,0) if not filled_status[i] else (0,0,255)
+            cv2.fillPoly(overlay, [pts], color)
+            cv2.polylines(frame, [pts], True, (255,255,255), 2)
 
-    frame = cv2.addWeighted(overlay, 0.5, frame, 0.5, 0)
+        frame = cv2.addWeighted(overlay, 0.5, frame, 0.5, 0)
 
-    total_spots = len(polygons)
-    free_spots = max(0, total_spots - full_spots)
+        free_spots = max(0, total_spots - full_spots)
+        
 
-    # ---------------- Print to Console ----------------
-    print(f"Full Spots: {full_spots}, Free Spots: {free_spots}")
+        # update stats
+        latest_counts["free"] = int(free_spots)
+        latest_counts["full"] = int(full_spots)
+        latest_counts["total"] = int(total_spots)
 
-    cvzone.putTextRect(frame, f"Free Spots: {free_spots}", (30, 50), 2, 2, colorB=(0,0,0), colorR=(196,127,40))
-    cvzone.putTextRect(frame, f"Full Spots: {full_spots}", (30, 120), 2, 2, colorB=(0,0,0), colorR=(196,127,40))
+        ok, jpg = cv2.imencode(".jpg", frame, encode_params)
+        if ok:
+            with jpeg_lock:
+                global latest_jpeg
+                latest_jpeg = jpg.tobytes()
 
-    # Draw polygon points while creating
-    for pt in polygon_points:
-        cv2.circle(frame, pt, 5, (0, 0, 255), thickness=-1)
+        # throttle a bit if needed
+        # time.sleep(0.005)
 
-    # ---------------- Label Key ----------------
-    key_instructions = [
-        "Controls:",
-        "A - Enable Polygon Editing",
-        "S - Disable Editing",
-        "Left Click - Add Point",
-        "U - Undo Polygon/Point",
-        "X - Clear All Polygons",
-        "Q - Quit Program"
-    ]
-    start_y = frame.shape[0] - (30 * len(key_instructions)) - 20
-    for i, text in enumerate(key_instructions):
-        cvzone.putTextRect(frame, text, pos=(30, start_y + i * 30), scale=1, thickness=1, colorB=(0,0,0), colorR=(196,127,40))
+t = threading.Thread(target=worker, daemon=True)
+t.start()
 
-    # ---------------- Show Popup ----------------
-    if popup_message and time.time() < popup_time:
-        cvzone.putTextRect(frame, popup_message, (700, 120), scale=2, thickness=2, colorB=(0,0,0), colorR=(196,127,40))
-    else:
-        popup_message = ""
+# ---------------- HTTP endpoints ----------------
+@app.route("/")
+def index():
+    return (
+        "<h2>EasyLot API</h2>"
+        "<ul>"
+        "<li><a href='/video_feed'>/video_feed</a> (MJPEG)</li>"
+        "<li><a href='/stats'>/stats</a></li>"
+        "<li><a href='/polygons'>/polygons</a> (GET / POST)</li>"
+        "</ul>"
+    )
 
-    overlay_logo(frame, logo, margin=10)
-    cv2.imshow('RGB Camera 1', frame)
+@app.route("/video_feed")
+def video_feed():
+    def gen():
+        boundary = b"--frame"
+        while True:
+            with jpeg_lock:
+                buf = latest_jpeg
+            if buf is None:
+                time.sleep(0.02)
+                continue
+            yield boundary + b"\r\nContent-Type: image/jpeg\r\n\r\n" + buf + b"\r\n"
+    return Response(gen(), mimetype="multipart/x-mixed-replace; boundary=frame",
+                    headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
-    # ---------------- Key Controls ----------------
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('q'):
-        break
-    elif key == ord('a'):
-        drawing_mode = True
-        show_popup("Drawing Enabled")
-    elif key == ord('s'):
-        drawing_mode = False
-        show_popup("Editing Stopped")
-    elif drawing_mode:  # Only allow these if drawing_mode is True
-        if key == ord('x'):
-            polygon_points.clear()
-            polygons.clear()
-            save_polygons()
-            show_popup("All Polygons Removed")
-        elif key == ord('u'):
-            if polygon_points:
-                polygon_points.pop()
-                show_popup("Removed Last Point")
-            elif polygons:
-                polygons.pop()
-                save_polygons()
-                show_popup("Removed Last Polygon")
+@app.route("/stats")
+def stats():
+    return jsonify(latest_counts)
 
-# ---------------- Cleanup ----------------
-if not is_image:
-    cap.release()
-cv2.destroyAllWindows()
+@app.route("/polygons", methods=["GET"])
+def get_polygons():
+    return jsonify({"polygons": polygons})
+
+@app.route("/polygons", methods=["POST"])
+def set_polygons():
+    body = request.get_json(force=True, silent=True) or {}
+    new_polys = body.get("polygons")
+    if not isinstance(new_polys, list):
+        abort(400, "polygons must be a list of quads: [[[x,y],...4],[...]]")
+    for p in new_polys:
+        if not (isinstance(p, list) and len(p) == 4 and all(isinstance(pt, list) and len(pt) == 2 for pt in p)):
+            abort(400, "each polygon must have 4 [x,y] points")
+    with open(POLYGON_FILE, "w") as f:
+        json.dump(new_polys, f)
+    load_polygons()
+    return jsonify({"ok": True, "total": len(polygons)})
+
+# ---------------- Main ----------------
+if __name__ == "__main__":
+    # For LAN access change host to "0.0.0.0"
+    app.run(host="127.0.0.1", port=5000, threaded=True)

@@ -1,0 +1,83 @@
+main{
+    align-content: center;
+}
+
+#ul-container{
+    background: var(--button-color);
+    width: 700px;
+    justify-self: center;
+    align-content: center;
+    font-size: 40px;
+    padding-top: 40px;
+    padding-bottom: 40px;
+    border-radius: 20px;
+}
+#top-li{
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+}
+#bottom-li{
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+ul {
+    list-style-type:none;
+    padding: 0;
+    margin: 0px;
+    box-shadow: 2px 2px 20px #000;
+}
+
+ul.main-menu{
+    width: 90%;
+    justify-self: center;
+    border-radius: 20px;
+}
+ul > li {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 2px solid black;
+    position: relative;
+}
+ul > li .arrow, ul > li .edit{
+    position: absolute;
+    right:10px;
+    font: 16px;
+    color: white;
+}
+
+ul > li .arrow {
+    transform: rotate(180deg);
+
+}
+
+
+
+ul > li.location.open .arrow {
+    transform: rotate(0);
+}
+
+ul > li.location ul {
+    display: none;
+}
+
+ul > li.location.open ul {
+    display: block;
+}
+
+ul > li.location ul li {
+    background-color: var(--secondary-color);
+    padding: 5px;
+    border: none;
+}
+
+ul > li.location ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 25px;
+}
+
+ul > li.location ul li a:hover {
+    text-decoration: underline;
+}
