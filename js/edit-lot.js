@@ -1,3 +1,4 @@
+
 /* === CONFIG === */
 const BACKEND = "http://127.0.0.1:5000";  // change if needed
 // If you later enable auth, set TOKEN or read from localStorage.
@@ -150,3 +151,4 @@ function setMsg(text, kind="ok") {
   catch (e) { setMsg(`Initial load failed: ${e.message}`, "err"); }
   draw();
 })();
+

@@ -3,11 +3,13 @@
     --w: 1280;
     --h: 720;
 }
+main{
+    padding-top: 85px
+}
 
 #toolbar { 
     display:flex; 
     gap:8px; 
-    margin-bottom:12px; 
     align-items:center; 
     flex-wrap: wrap; 
 }
@@ -16,13 +18,12 @@ button {
     padding:8px 12px; 
 }
 
-#stage {
-  --scale: 0.75;                 /* <— define a default */
-  position: relative;
-  width: calc(var(--w) * 1px);
-  height: calc(var(--h) * 1px);
-  transform-origin: top left;
-  transform: scale(var(--scale)); /* <— reads the var you set from JS */
+.stage { 
+    position: relative; 
+    width: calc(var(--w) * 1px); 
+    height: calc(var(--h) * 1px); 
+    transform-origin: top left; 
+    transform: scale(.75);
 }
 
 #stream { 
@@ -45,16 +46,5 @@ button {
 .hint { 
     color:#666; 
     font-size:14px; 
-    margin-top:6px; 
-}
 
-#zoomBar { 
-    display:flex; 
-    align-items:center; 
-    gap:.5rem; 
-    margin:.5rem 0; 
-}
-
-#zoomBar input[type="range"]{ 
-    width:240px; 
 }

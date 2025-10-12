@@ -25,15 +25,6 @@
     </header>
 
     <main>
-        <!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>EasyLot – Polygon Admin</title>
-
-</head>
-<body>
-  <h1>EasyLot – Polygon Admin</h1>
 
   <div id="toolbar">
     <button id="btnUndoPoint">Undo Point</button>
@@ -43,22 +34,16 @@
     <button id="btnSave">Save to Server</button>
     <span id="msg"></span>
   </div>
-<div id="zoomBar">
-    <button id="minus" type="button">−</button>
-    <input id="range" type="range" min="25" max="200" value="75" step="5" />
-    <button id="plus"  type="button">+</button>
-    <span id="zoomPct">75%</span>
-</div>
 
-<div id="stage">
-    <img id="stream" src="http://127.0.0.1:5000/video_feed" alt="Live stream" />
+  <div class="stage">
+    <!-- Live MJPEG stream from Flask -->
+    <img id="stream" src="" alt="Live stream"/>
+    <!-- Transparent drawing canvas (same pixel size as server frames) -->
     <canvas id="lot" width="1280" height="720"></canvas>
-</div>
-
-
+  </div>
 
   <div class="hint">
-    Click the for coners in this order:<br>
+    Click the four coners in this order:<br>
     <b>TOP LEFT, TOP RIGHT, BOTTOM RIGHT BOTTOM LEFT.</b>
     <br/>Backend: <code id="backendUrlText"></code>
   </div>
@@ -72,8 +57,6 @@
 
   
     <script src="/js/edit-lot.js"></script>
-    <script src="/js/display-video.js"></script>
-    
 
 </body>
 </html>
