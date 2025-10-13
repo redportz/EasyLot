@@ -5,6 +5,7 @@ header{
     height: 70px;
     width: 100%;
     background-color: var(--navbar-bg);
+    z-index: 9999;
 
 }
 
