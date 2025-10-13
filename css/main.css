@@ -18,7 +18,7 @@ body{
 }
 main{
     padding-top: 50px;
-    height: calc(100vh - 85px);
+    min-height: calc(100vh - 85px);
 }
 button{
     cursor: pointer;
