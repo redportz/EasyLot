@@ -40,7 +40,7 @@ load_polygons()
 
 # ---------------- Load Homography ----------------
 H = None
-H_WIDTH, H_HEIGHT = 1600, 1200  # output warped size
+H_WIDTH, H_HEIGHT = 1280, 720  # output warped size
 if os.path.exists(HOMOGRAPHY_FILE):
     try:
         with open(HOMOGRAPHY_FILE, "r") as f:
@@ -56,13 +56,34 @@ else:
 
 # ---------------- YOLO + camera ----------------
 model = YOLO(MODEL_PATH)
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    print("Cannot open camera, using test image instead")
+
+cap = None
+TEST_IMAGE = None
+
+try:
+    # --- Try default camera first ---
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        cap.release()
+        cap = None
+
+        # --- Windows-specific fallback: CAP_DSHOW often fixes camera issues ---
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap.release()
+            cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+
+    if not cap or not cap.isOpened():
+        cap = None
+        TEST_IMAGE = cv2.imread("tester.jpg")
+        if TEST_IMAGE is None:
+            raise RuntimeError("No camera available and test image not found.")
+
+except Exception as e:
     cap = None
     TEST_IMAGE = cv2.imread("tester.jpg")
     if TEST_IMAGE is None:
-        raise RuntimeError("No camera and test image not found")
+        raise RuntimeError("Camera initialization failed and no test image found.")
 
 # ---------------- Worker ----------------
 def worker():
