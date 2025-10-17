@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Load your parking lot snapshot
-image_path = "tester.jpg"
+image_path = "./assets/tester.jpg"
 image = cv2.imread(image_path)
 
 if image is None:
@@ -35,7 +35,7 @@ if len(points) != 4:
     exit()
 
 # Step 2: Define output size (your “bird’s-eye” view)
-width, height = 1600, 1200
+width, height = 1280, 720
 
 dst_points = np.array([
     [0, 0],
