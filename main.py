@@ -40,13 +40,15 @@ load_polygons()
 # ---------------- YOLO + camera ----------------
 model = YOLO(MODEL_PATH)
 
-# Windows tip: CAP_DSHOW often fixes camera issues. Try index 0 then 1.
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-if not cap.isOpened():
-    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-if not cap.isOpened():
-    raise RuntimeError("Cannot open any camera (tried indexes 0 and 1).")
+#https://taco-about-python.com/video_feed
 
+LIVE_STREAM_URL = "https://taco-about-python.com/video_feed"
+
+print(f"Opening live stream from: {LIVE_STREAM_URL}")
+cap = cv2.VideoCapture(LIVE_STREAM_URL)
+
+if not cap.isOpened():
+    raise RuntimeError(f"Unable to open live stream: {LIVE_STREAM_URL}")
 
 # ---------------- Worker: process frames continuously ----------------
 def worker():
