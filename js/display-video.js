@@ -1,8 +1,5 @@
 // change if your server is elsewhere
 const BACKEND = "http://127.0.0.1:5000"; 
-
-document.getElementById("backendUrlText").textContent = BACKEND;
-
 /* STREAM  */
 const streamEl = document.getElementById("stream");
 // add a timestamp to avoid browsers caching the first frame
