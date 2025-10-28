@@ -40,8 +40,6 @@ load_polygons()
 # ---------------- YOLO + camera ----------------
 model = YOLO(MODEL_PATH)
 
-#https://taco-about-python.com/video_feed
-
 LIVE_STREAM_URL = "https://taco-about-python.com/video_feed"
 
 print(f"Opening live stream from: {LIVE_STREAM_URL}")
@@ -53,59 +51,92 @@ if not cap.isOpened():
 # ---------------- Worker: process frames continuously ----------------
 def worker():
     last_poly_check = 0
+    last_detection_time = 0
     encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
+
+    # variables for certainty
+    CONF_CERTAIN = 0.2       # YOLO confidence minimum for a certain detection
+    EMPTY_CONFIDENCE = 0.2   # If average confidence of detections is below this, assume the spots are full
+    CHECK_INTERVAL = 5       # seconds between YOLO detections
+
+    results = None  # store last YOLO result to reuse between intervals
 
     while running:
         ok, frame = cap.read()
         if not ok:
-            time.sleep(0.02)
+            time.sleep(0.5)
             continue
 
         frame = cv2.resize(frame, (FRAME_W, FRAME_H))
-
-        # hot-reload polygons every 2s (so admin updates apply)
         now = time.time()
-        if now - last_poly_check > 2.0:
+
+        # reload polygons every 5s 
+        if now - last_poly_check > 5.0:
             load_polygons()
             last_poly_check = now
 
-        # detect/track cars (COCO class 2)
-        results = model.track(frame, persist=True, classes=[2], conf=0.25)
+        # Only run YOLO detection every CHECK_INTERVAL seconds
+        if now - last_detection_time > CHECK_INTERVAL:
+            results = model.track(frame, persist=True, classes=[2], conf=CONF_CERTAIN)
+            last_detection_time = now
+            print(f"YOLO checked at {time.strftime('%H:%M:%S')}")
 
         overlay = frame.copy()
         full_spots = 0
         total_spots = len(polygons)
         filled_status = [False] * total_spots
+        avg_conf = 0.0
 
-        if results and results[0].boxes.id is not None:
-            boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
-            for (x1, y1, x2, y2) in boxes:
-                cx, cy = int((x1+x2)/2), int((y1+y2)/2)
-                corners = [(x1,y1),(x2,y1),(x2,y2),(x1,y2),(cx,cy)]
+        # --- Only process if we have detection  ---
+        if results and results[0].boxes is not None:
+            boxes = results[0].boxes
+            xyxy = boxes.xyxy.cpu().numpy().astype(int)
+            confs = boxes.conf.cpu().numpy()
+            avg_conf = float(np.mean(confs)) if len(confs) > 0 else 0.0
+
+            for (x1, y1, x2, y2), conf in zip(xyxy, confs):
+                cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
+                corners = [(x1, y1), (x2, y1), (x2, y2), (x1, y2), (cx, cy)]
                 for i, poly in enumerate(polygons):
-                    pts = np.array(poly, np.int32).reshape((-1,1,2))
-                    if any(cv2.pointPolygonTest(pts, (float(px), float(py)), False) >= 0 for (px,py) in corners):
-                        if not filled_status[i]:
-                            filled_status[i] = True
-                            full_spots += 1
+                    pts = np.array(poly, np.int32).reshape((-1, 1, 2))
+
+                    # Check overlap between detection and polygon
+                    overlap = any(cv2.pointPolygonTest(pts, (float(px), float(py)), False) >= 0 
+                                  for (px, py) in corners)
+
+                    if overlap and conf >= CONF_CERTAIN:
+                        filled_status[i] = True
                         break
 
-        # draw polygons
+        # --- Safety rule: assume full unless sure its empty ---
+        if avg_conf < EMPTY_CONFIDENCE:
+            filled_status = [True] * total_spots
+
+        full_spots = sum(1 for x in filled_status if x)
+
+        # --- Draw polygons ---
         for i, poly in enumerate(polygons):
             pts = np.array(poly, np.int32).reshape((-1,1,2))
             color = (0,255,0) if not filled_status[i] else (0,0,255)
             cv2.fillPoly(overlay, [pts], color)
             cv2.polylines(frame, [pts], True, (255,255,255), 2)
 
+            #numbering drawn parking spots
+            M = cv2.moments(pts)
+            if M["m00"] != 0:
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+                cv2.putText(frame, str(i+1), (cX-10, cY+10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255), 2)
+
         frame = cv2.addWeighted(overlay, 0.5, frame, 0.5, 0)
 
+        # --- Update stats ---
         free_spots = max(0, total_spots - full_spots)
-        
-
-        # update stats
         latest_counts["free"] = int(free_spots)
         latest_counts["full"] = int(full_spots)
         latest_counts["total"] = int(total_spots)
+        latest_counts["filled_status"] = filled_status  #for the free spots root call
+
 
         ok, jpg = cv2.imencode(".jpg", frame, encode_params)
         if ok:
@@ -113,8 +144,8 @@ def worker():
                 global latest_jpeg
                 latest_jpeg = jpg.tobytes()
 
-        # throttle a bit if needed
-        # time.sleep(0.005)
+        time.sleep(0.1)  # short pause for stability
+
 
 t = threading.Thread(target=worker, daemon=True)
 t.start()
@@ -139,7 +170,7 @@ def video_feed():
             with jpeg_lock:
                 buf = latest_jpeg
             if buf is None:
-                time.sleep(0.02)
+                time.sleep(0.5)
                 continue
             yield boundary + b"\r\nContent-Type: image/jpeg\r\n\r\n" + buf + b"\r\n"
     return Response(gen(), mimetype="multipart/x-mixed-replace; boundary=frame",
@@ -166,6 +197,13 @@ def set_polygons():
         json.dump(new_polys, f)
     load_polygons()
     return jsonify({"ok": True, "total": len(polygons)})
+
+@app.route("/free_spots")
+def free_spots():
+    # Numbers start at 1, returns empty if none are open
+    empty_spots = [i+1 for i, filled in enumerate(latest_counts.get("filled_status", [])) if not filled]
+    return jsonify({"empty_spots": empty_spots})
+
 
 # ---------------- Main ----------------
 if __name__ == "__main__":
