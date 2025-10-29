@@ -6,8 +6,8 @@ from ultralytics import YOLO
 
 # ---------------- Config ----------------
 POLYGON_FILE = "polygon.json"
-MODEL_PATH   = "yolov8s.pt"   # or your best.pt
-FRAME_W, FRAME_H = 1280, 720  # reduce if you need more FPS
+MODEL_PATH   = "yolov8s.pt"
+FRAME_W, FRAME_H = 1280, 720
 
 # ---------------- App ----------------
 app = Flask(__name__)
@@ -15,7 +15,7 @@ CORS(app)
 
 # ---------------- State ----------------
 polygons = []
-latest_counts = {"free": 0, "full": 0, "total": 0}
+latest_counts = {"free": 0, "full": 0, "total": 0, "free_spaces":[], "full_spaces":[]}
 latest_jpeg = None
 jpeg_lock = threading.Lock()
 running = True
@@ -40,9 +40,9 @@ load_polygons()
 # ---------------- YOLO + camera ----------------
 model = YOLO(MODEL_PATH)
 
-#https://taco-about-python.com/video_feed
+#LIVE_STREAM_URL = "https://taco-about-python.com/video_feed"
 
-LIVE_STREAM_URL = "https://taco-about-python.com/video_feed"
+LIVE_STREAM_URL = "http://170.249.152.2:8080/video.mjpg"
 
 print(f"Opening live stream from: {LIVE_STREAM_URL}")
 cap = cv2.VideoCapture(LIVE_STREAM_URL)
@@ -63,14 +63,14 @@ def worker():
 
         frame = cv2.resize(frame, (FRAME_W, FRAME_H))
 
-        # hot-reload polygons every 2s (so admin updates apply)
+        # hot-reload polygons every 2s
         now = time.time()
         if now - last_poly_check > 2.0:
             load_polygons()
             last_poly_check = now
 
-        # detect/track cars (COCO class 2)
-        results = model.track(frame, persist=True, classes=[2], conf=0.25)
+        # detect/track cars and trucks (2 and 7)
+        results = model.track(frame, persist=True, classes=[2, 7], conf=0.25)
 
         overlay = frame.copy()
         full_spots = 0
@@ -90,31 +90,40 @@ def worker():
                             full_spots += 1
                         break
 
-        # draw polygons
+        # draw polygons + numbering 
         for i, poly in enumerate(polygons):
             pts = np.array(poly, np.int32).reshape((-1,1,2))
             color = (0,255,0) if not filled_status[i] else (0,0,255)
             cv2.fillPoly(overlay, [pts], color)
             cv2.polylines(frame, [pts], True, (255,255,255), 2)
+            
+            M = cv2.moments(pts)
+            if M["m00"] != 0:
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+                cv2.putText(frame, str(i+1), (cX-10, cY+10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255), 2)
 
         frame = cv2.addWeighted(overlay, 0.5, frame, 0.5, 0)
 
         free_spots = max(0, total_spots - full_spots)
-        
 
+        #tracks which space numbers are free/full
+
+        free_spaces = [i + 1 for i, filled in enumerate(filled_status) if not filled]
+        full_spaces = [i + 1 for i, filled in enumerate(filled_status) if filled]
+        
         # update stats
         latest_counts["free"] = int(free_spots)
         latest_counts["full"] = int(full_spots)
         latest_counts["total"] = int(total_spots)
+        latest_counts["free_spaces"] = free_spaces
+        latest_counts["full_spaces"] = full_spaces
 
         ok, jpg = cv2.imencode(".jpg", frame, encode_params)
         if ok:
             with jpeg_lock:
                 global latest_jpeg
                 latest_jpeg = jpg.tobytes()
-
-        # throttle a bit if needed
-        # time.sleep(0.005)
 
 t = threading.Thread(target=worker, daemon=True)
 t.start()
@@ -148,6 +157,11 @@ def video_feed():
 @app.route("/stats")
 def stats():
     return jsonify(latest_counts)
+    #number of free spaces
+    #number id of free spaces
+    #number of full spaces
+    #number id of full spaces
+    #total number of drawn spaces
 
 @app.route("/polygons", methods=["GET"])
 def get_polygons():
