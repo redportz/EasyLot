@@ -20,7 +20,9 @@
             <p id="EasyLot">EasyLot</p>
         </div>
         <div id="right-topbar">
-            <a id="login-btn" title="Log in" href="/login-page.html"><i class="fa-solid fa-right-to-bracket"></i></a>
+            <div id="log-btn">
+
+            </div>
         </div>
     </header>
 
@@ -29,9 +31,9 @@
 <ul class="main-menu">
         <li class="location" id="top-li">Student Parking
             <span class="arrow"><i class="fa-solid fa-up-long"></i></span>
-            <ul>
-                <li><a href="/Engineering building/Engineering-Parking-Lot.html">Back of Engineering Building</a></li>
-            </ul>
+            <ul id="lot-list">
+                <!-- lots will autofill here -->
+            </ul>   
         </li>
         <li class="location">Staff Parking
             <span class="arrow"><i class="fa-solid fa-up-long"></i></span>
@@ -53,5 +55,8 @@
         </div>
     </footer>
     <script src="/js/rotate-arrows.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/logout.js"></script>
+    <script src="/js/lotListGen.js"></script>
 </body>
 </html>

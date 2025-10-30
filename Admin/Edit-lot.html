@@ -20,8 +20,11 @@
             <p id="EasyLot">EasyLot</p>
         </div>
         <div id="right-topbar">
-            <a id="login-btn" title="Log in" href="/login-page.html"><i class="fa-solid fa-right-to-bracket"></i></a>
-        </div>
+            <a id="home-btn" title="Home" href="/index.html"><i class="fa-solid fa-house"></i></a>
+            <a id="logout-btn" title="Click to log out" href="/login-page.html">
+              <i class="fa-solid fa-right-to-bracket"></i>
+            </a>
+          </div>
     </header>
 
     <main>
@@ -57,6 +60,15 @@
 
   
     <script src="/js/edit-lot.js"></script>
+    <script src="/js/logout.js"></script>
+    <script>
+        const userData = localStorage.getItem("user");
+        if (!userData == "admin") {
+          // If no user is found, redirect to login
+          window.location.href = "/login-page.html";
+          return;
+        }
+    </script>
 
 </body>
 </html>

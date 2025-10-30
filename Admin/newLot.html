@@ -7,44 +7,42 @@
     <link rel="icon" type="image/svg+xml" href="/assets/logo.png" />
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/top-bar.css">
-    <link rel="stylesheet" href="/css/live-feed.css">
-
-
+    <link rel="stylesheet" href="/css/newLot.css">
 
     <title>EasyLot</title>
 </head>
 <body>
         <header>
         <div id="left-topbar">
-            <a id="EasyLot-logo" href="/" ><img src="/assets/logo.png" alt="EasyLot Logo"></a>
+            <a id="EasyLot-logo" ><img src="/assets/logo.png" alt="EasyLot Logo"></a>
         </div>
         <div id="middle-topbar">
             <p id="EasyLot">EasyLot</p>
         </div>
         <div id="right-topbar">
-            <a id="home-btn" title="Home" href="/index.html"><i class="fa-solid fa-house"></i></a>
-            <a id="login-btn" title="Log in" href="/login-page.html"><i class="fa-solid fa-right-to-bracket"></i></a>
+            <div id="log-btn">
+
+            </div>
         </div>
     </header>
 
     <main>
-        <div class="wrap">
-
-    <div class="statusbar">
-      <span id="lotStatus" class="pill ok">Loading…</span>
-      <div class="counts">
-        <span>Free: <b id="free">—</b></span>
-        <span>Full: <b id="full">—</b></span>
-        <span>Total: <b id="total">—</b></span>
-      </div>
-    </div>
-
-    <div class="stage">
-      <img id="stream" alt="Live stream" />
-    </div>
-
-  </div>
+        <div class="form-container">        
+        <div class="form-header">
+            <img src="/assets/logo.png" alt="EasyLot">
+            <span>EasyLot</span>
+        </div>
+        <form id="new-lot-form">
+            <label for="Lot-name">Lot name</label>
+            <input type="text" id="Lot-name" name="Lot-name" placeholder="Lot Name"  required>
+            <label for="Url">Url</label>
+            <input type="url" id="Url" name="Url" placeholder="https://example.com/video_feed" required>
         
+        </form>
+
+        <div class="submit-actions">
+            <button title="Click to Login" type="submit" class="submit-btn" form="new-lot-form">Log in</button><br>
+        </div>
     </main>
 
     <footer id="footer">
@@ -53,6 +51,8 @@
         </div>
     </footer>
     <script src="/js/rotate-arrows.js"></script>
-    <script src="/js/display-video.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/logout.js"></script>
+    <script src="/js/lotListGen.js"></script>
 </body>
 </html>
