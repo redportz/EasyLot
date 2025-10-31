@@ -1,0 +1,13 @@
+after form is created: (add the ability to change live feed path at edit lot)
+add info to lot list
+create folder
+create files
+add data to files
+open "edit lot"
+load the live feed
+allow editing when they create a new polygon create a new parking spot in lot creator section
+lot creator section will be right below where the live feed is and where the edit lot is one will be locked and the other not
+add a "done button" 
+when pressed
+save the created lot info to database or on system
+the final state should show the lot and the live feed 

@@ -32,13 +32,13 @@
             <img src="/assets/logo.png" alt="EasyLot">
             <span>EasyLot</span>
         </div>
-        <form id="new-lot-form">
+        <form id="new-lot-form" onsubmit="CreateLot()">
             <label for="Lot-name">Lot name</label>
-            <input type="text" id="Lot-name" name="Lot-name" placeholder="Lot Name"  required>
+            <input type="text" id="Lot-name" name="Lot-name" placeholder="Example parking lot"  required>
+            <label for="Folder-name">Folder Name</label>
+            <input type="text" id="Folder-name" name="Folder-name" placeholder="Example"  required>
             <label for="Url">Url</label>
             <input type="url" id="Url" name="Url" placeholder="https://example.com/video_feed" required>
-            
-        
         </form>
 
         <div class="submit-actions">
@@ -51,9 +51,9 @@
             Copyright &copy; Eric Zabala & Emily Kisor. <a target="_blank" href="https://github.com/redportz/EasyLot"><i class="fa-brands fa-square-github"></i> </a>
         </div>
     </footer>
-    <script src="/js/rotate-arrows.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/logout.js"></script>
-    <script src="/js/lotListGen.js"></script>
+    <script src="/js/lotGenorator.js"></script>
+    
 </body>
 </html>

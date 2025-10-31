@@ -1,6 +1,14 @@
 [
   {
     "name": "Back of Engineering Building",
-    "folder": "Engineering building"
+    "folder": "Engineering building",
+    "live_feed_url": "https://taco-about-python.com/",
+    "spot_quantity": 0
+  },
+  {
+    "name": "Mobile Bay parking lot",
+    "folder": "Mobile Bay want",
+    "live_feed_url": "http://170.249.152.2:8080/video.mjpg",
+    "spot_quantity": 0
   }
 ]
