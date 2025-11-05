@@ -1,7 +1,6 @@
 // Set auto-logout time to 5 minutes (in milliseconds)
-const AUTO_LOGOUT_TIME = 5 *60* 1000; //remove the 60 to check logout timer. Will logout after 5 seconds
+const AUTO_LOGOUT_TIME = 2 *60* 1000; //remove the 60 to check logout timer. Will logout after 5 seconds
 let logoutTimer;
-
 // Function to reset the auto-logout timer
 function resetLogoutTimer() {
   clearTimeout(logoutTimer);
@@ -19,14 +18,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Parse the stored user data
   const user = JSON.parse(userData);
-  const currentPath = window.location.pathname;
   
-  // If the current page is in the "/admin/" folder but the user's role isn't "Admin"
-  if (currentPath.includes("/admin/") && user.role !== "Admin") {
-    window.location.href = "/login-page.html";
-    alert("Access Denied: You are not authorized to view that page.");
-    return;
-  }
   
   // Setup auto-logout timer and reset it on user interactions
   resetLogoutTimer();

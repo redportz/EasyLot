@@ -2,27 +2,26 @@ document.getElementById("new-lot-form").addEventListener("submit", async (event)
     event.preventDefault();
 
     let lotName = document.getElementById("Lot-name").value.trim();
-    let folder = document.getElementById("Folder-name").value.trim();
     let liveUrl = document.getElementById("Url").value.trim();
-
-    if (!lotName || !folder || !liveUrl) {
+    let selected = document.querySelector('input[name="yes_no"]:checked')?.value;
+    const upside_down = selected === "true";
+    if (!lotName || !liveUrl) {
         alert("Please fill in all fields.");
     return;
     }
-    AddLotToList(lotName, folder, liveUrl, event)
-    // CreateFolder(folderName);
+    AddLotToList(lotName, liveUrl, upside_down, event)
 });
 
    
     
 
 
-async function AddLotToList(lotName, folder, liveUrl,event) {
+async function AddLotToList(lotName, liveUrl, upside_down, event) {
    try {
-        const res = await fetch("http://localhost:5000/lots", {
+        const res = await fetch("http://127.0.0.1:5001/lots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: lotName, folder, live_feed_url: liveUrl })
+        body: JSON.stringify({ name: lotName, live_feed_url: liveUrl, is_video_upside_down: upside_down })
     });
 
     if (!res.ok) {
@@ -30,26 +29,16 @@ async function AddLotToList(lotName, folder, liveUrl,event) {
         throw new Error(err.message || "Failed to create lot");
     }
 
+    const data = await res.json();
+    const lotId = data.id;
+
     alert("Lot created!");
-    // optionally reset form
         event.target.reset();
+
+    window.location.href = `./Edit-lot.html?id=${lotId}`;
     } catch (e) {
         console.error(e);
         alert(e.message);
   }
     
 }
-
-// function CreateFolder(folderName) {
-    
-//     CreatePolyFile()
-//     CreateSpotInfoFile()
-// }
-
-// function CreatePolyFile() {
-    
-// }
-
-// function CreateSpotInfoFile() {
-    
-// }

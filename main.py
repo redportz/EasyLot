@@ -56,6 +56,18 @@ def update_spot_status(spot_id, status):
 # on predefined polygons, updates each spot's status in the database, and
 # maintains the latest counts and images for the /stats and /video_feed endpoints.
 
+def get_is_upside_down(lot_id):
+    """Fetch whether the given lot's video should be flipped upside down."""
+    try:
+        r = requests.get(f"{API_BASE}/lots/{lot_id}")
+        r.raise_for_status()
+        lot = r.json()
+        return bool(lot.get("is_video_upside_down", False))
+    except Exception as e:
+        print(f"[LOT {lot_id}] Could not fetch is_video_upside_down: {e}")
+        return False
+
+
 def lot_worker(lot_id, live_url):
     print(f"[LOT {lot_id}] Starting worker for {live_url}")
     
@@ -82,7 +94,8 @@ def lot_worker(lot_id, live_url):
         print(f"[LOT {lot_id}] Failed to open stream. Retrying in {retry_interval}s...")
         time.sleep(retry_interval)
         cap.open(live_url)
-
+    
+    is_upside_down = get_is_upside_down(lot_id)
     encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
     polygons, spot_ids = load_polygons_from_db(lot_id)
     last_poly_check = 0
@@ -93,12 +106,16 @@ def lot_worker(lot_id, live_url):
             time.sleep(0.02)
             continue
 
+        if is_upside_down:
+            frame = cv2.rotate(frame, cv2.ROTATE_180)
+
         frame = cv2.resize(frame, (FRAME_W, FRAME_H))
         now = time.time()
 
         # Reload polygons every 10s
         if now - last_poly_check > 10:
             polygons, spot_ids = load_polygons_from_db(lot_id)
+            is_upside_down = get_is_upside_down(lot_id)
             last_poly_check = now
 
         # Initialize counts and statuses in case detection fails

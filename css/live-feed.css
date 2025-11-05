@@ -48,3 +48,30 @@ button {
     font-size:14px; 
 
 }
+
+  #stage .stall rect {
+    fill:#2a5;
+    stroke:#888;
+    stroke-width:1;
+}
+
+#stage .stall[data-status="full"] rect {
+    fill:#a33;
+}
+
+#stage .stall.selected rect {
+    stroke:#6cf;
+    stroke-width:2;
+}
+
+#stage text {
+    fill:#fff;
+    font: 18px system-ui;
+    pointer-events:none;
+}
+
+svg{
+    height: 540px;
+    width: 960px;
+    background-color: #666;
+}
