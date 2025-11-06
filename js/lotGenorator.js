@@ -32,13 +32,17 @@ async function AddLotToList(lotName, liveUrl, upside_down, event) {
     const data = await res.json();
     const lotId = data.id;
 
-    alert("Lot created!");
-        event.target.reset();
 
-    window.location.href = `./Edit-lot.html?id=${lotId}`;
-    } catch (e) {
-        console.error(e);
-        alert(e.message);
+    const loading_overlay = document.getElementById("loading_overlay");
+    loading_overlay.style.display = "block"
+        setTimeout(() => {
+      loading_overlay.style.display = "none";
+      window.location.href = `./Edit-lot.html?id=${lotId}`;
+    }, 20000);
+  } catch (e) {
+    console.error(e);
+    overlay.remove();
+    alert(e.message);
   }
     
 }
