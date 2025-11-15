@@ -57,7 +57,7 @@ function handleLoginSuccess(user) {
     // Redirect based on role
     switch (user.role) {
         case "Admin":
-            window.location.href = "./admin/homePage.html";
+            window.location.href = "./index.html";
             break;
         default:
             alert("Unknown role. Please contact support.");

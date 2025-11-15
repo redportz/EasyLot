@@ -55,26 +55,16 @@ header #middle-topbar{
 
 }
 
-#login-btn i , #logout-btn i, #home-btn i{
+#login-btn i , #logout-btn i, #home-btn i, #new-lot-btn i{
     font-size: 70px;
     margin-right: 10px;
     margin-left: 10px;
     vertical-align: bottom;
-}
-
-#login-btn i,#home-btn i{
     color: var(--button-color);
 }
 
-#login-btn i:hover, #home-btn:hover{
-    color: var(--button-hover);
-}
 
-#logout-btn i{
-    color: var(--button-color);
-}
-
-#logout-btn i:hover{
+#login-btn i:hover, #home-btn:hover,#logout-btn i:hover,#new-lot-btn i{
     color: var(--button-hover);
 }
 

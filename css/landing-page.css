@@ -12,14 +12,6 @@ main{
     padding-bottom: 40px;
     border-radius: 20px;
 }
-#top-li{
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-}
-#bottom-li{
-    border-bottom-left-radius: 20px;
-    border-bottom-right-radius: 20px;
-}
 ul {
     list-style-type:none;
     padding: 0;
@@ -47,37 +39,16 @@ ul > li .arrow, ul > li .edit{
     color: white;
 }
 
-ul > li .arrow {
-    transform: rotate(180deg);
-
-}
-
-
-
-ul > li.location.open .arrow {
-    transform: rotate(0);
-}
-
-ul > li.location ul {
-    display: none;
-}
-
-ul > li.location.open ul {
-    display: block;
-}
-
-ul > li.location ul li {
-    background-color: var(--secondary-color);
-    padding: 5px;
-    border: none;
-}
-
-ul > li.location ul li a {
+ul li a {
     color: white;
     text-decoration: none;
     font-size: 25px;
 }
 
-ul > li.location ul li a:hover {
+ul li a:hover {
     text-decoration: underline;
+}
+.delete-btn{
+    padding-right: 12px;
+    color: red;
 }
