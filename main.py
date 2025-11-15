@@ -18,16 +18,35 @@ CORS(app)
 # ---------------- State ----------------
 lot_workers = {}
 
+# ---------------- Threaded Camera ----------------
+class ThreadedCamera:
+    """Background thread that keeps the latest frame from a VideoCapture object."""
+    def __init__(self, src, fps=30):
+        self.capture = cv2.VideoCapture(src)
+        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 2)
+        self.FPS = 1 / fps
+        self.frame = None
+        self.status = False
+        t = threading.Thread(target=self.update, daemon=True)
+        t.start()
+
+    def update(self):
+        while True:
+            if self.capture.isOpened():
+                self.status, self.frame = self.capture.read()
+            time.sleep(self.FPS)
+
+    def get_frame(self):
+        return self.frame if self.status else None
+
 # ---------------- Helpers ----------------
 def load_polygons_from_db(lot_id):
     polygons = []
     spot_ids = []
     try:
-        # Get spots
         r = requests.get(f"{API_BASE}/lots/{lot_id}/spots")
         r.raise_for_status()
         spots = r.json()
-
         for spot in spots:
             spot_id = spot["id"]
             spot_ids.append(spot_id)
@@ -52,7 +71,6 @@ def update_spot_status(spot_id, status):
         )
     except Exception as e:
         print(f"Failed to update spot {spot_id}: {e}")
-
 
 # ---------------- Worker ----------------
 def get_is_upside_down(lot_id):
@@ -83,13 +101,7 @@ def lot_worker(lot_id, live_url):
 
     state = lot_workers[lot_id]["state"]
     model = YOLO(MODEL_PATH)
-    cap = cv2.VideoCapture(live_url)
-
-    retry_interval = 5
-    while not cap.isOpened() and state["running"]:
-        print(f"[LOT {lot_id}] Failed to open stream. Retrying in {retry_interval}s...")
-        time.sleep(retry_interval)
-        cap.open(live_url)
+    cam = ThreadedCamera(live_url, fps=30)
 
     is_upside_down = get_is_upside_down(lot_id)
     encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 80]
@@ -99,14 +111,13 @@ def lot_worker(lot_id, live_url):
     detection_interval = 30  # seconds
 
     while state["running"]:
-        ok, frame = cap.read()
-        if not ok:
+        frame = cam.get_frame()
+        if frame is None:
             time.sleep(0.02)
             continue
 
         if is_upside_down:
             frame = cv2.rotate(frame, cv2.ROTATE_180)
-
         frame_resized = cv2.resize(frame, (FRAME_W, FRAME_H))
 
         # Always store the latest frame for the video feed
@@ -123,7 +134,7 @@ def lot_worker(lot_id, live_url):
             is_upside_down = get_is_upside_down(lot_id)
             last_poly_check = now
 
-        # Run YOLO only every 10s
+        # Run YOLO only every detection_interval
         if now - last_detection > detection_interval and state["latest_frame"] is not None:
             frame_for_detection = state["latest_frame"].copy()
             total_spots = len(polygons)
@@ -183,9 +194,7 @@ def orchestrator():
             print("Orchestrator error:", e)
         time.sleep(POLL_INTERVAL)
 
-
 threading.Thread(target=orchestrator, daemon=True).start()
-
 
 # ---------------- Endpoints ----------------
 @app.route("/")
@@ -199,7 +208,6 @@ def index():
         ])
         + "</ul>"
     )
-
 
 @app.route("/video_feed/<int:lot_id>")
 def video_feed(lot_id):
@@ -221,7 +229,6 @@ def video_feed(lot_id):
 
     return Response(gen(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
-
 @app.route("/stats/<int:lot_id>")
 def stats(lot_id):
     if lot_id not in lot_workers:
@@ -237,7 +244,6 @@ def stats(lot_id):
     ]
     counts = state.get("latest_counts", {"free": 0, "full": 0, "total": 0})
     return jsonify({"spots": response_spots, "counts": counts})
-
 
 # ---------------- Main ----------------
 if __name__ == "__main__":
