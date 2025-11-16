@@ -9,7 +9,7 @@ import requests
 MODEL_PATH = "yolov8s.pt"
 FRAME_W, FRAME_H = 1280, 720
 POLL_INTERVAL = 10  # seconds between DB checks
-API_BASE = "http://127.0.0.1:5001"  # DB API
+API_BASE = "http://localhost:5001"  # DB API
 
 # ---------------- App ----------------
 app = Flask(__name__)
@@ -247,4 +247,4 @@ def stats(lot_id):
 
 # ---------------- Main ----------------
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, threaded=True)
+    app.run(host="127.0.0.1", port=5000, threaded=True, debug=False)

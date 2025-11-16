@@ -1,6 +1,3 @@
-// change if your server is elsewhere
-const BACKEND = "http://127.0.0.1:5000"; 
-
 const params = new URLSearchParams(window.location.search);
 const lotId = params.get("id");
 if (!lotId) {
@@ -10,7 +7,7 @@ if (!lotId) {
 /* STREAM  */
 const streamEl = document.getElementById("stream");
 // add a timestamp to avoid browsers caching the first frame
-streamEl.src = `${BACKEND}/video_feed/${lotId}`;
+streamEl.src = `/video_feed/${lotId}`;
 
 /*  STATS POLLER  */
 const elFree = document.getElementById("free");
@@ -34,7 +31,7 @@ function setStatus(free, full, total) {
 
 async function fetchStats() {
   try {
-    const res = await fetch(`${BACKEND}/stats/${lotId}`, { cache: "no-store" });
+    const res = await fetch(`/stats/${lotId}`, { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
     const j = await res.json();
     setStatus(j.counts.free ?? 0, j.counts.full ?? 0, j.counts.total ?? 0);
