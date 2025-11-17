@@ -1,5 +1,4 @@
 /* === CONFIG === */
-const DB = "http://127.0.0.1:5001"; 
 const SLOT_W = 60;                             // drawn slot width (px)
 const SLOT_H = 100;                             // drawn slot height (px)
 const STATUS_POLL_MS = 7000;                   // how often to refresh colors
@@ -18,6 +17,11 @@ const deleteBtn = document.getElementById("deleteBox");
 /* === LOT ID FROM URL === */
 const params = new URLSearchParams(location.search);
 const lotId = Number(params.get("lotId") || params.get("id"));
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 if (!lotId) {
   alert("Missing ?id= or ?lotId= in URL.");
   throw new Error("lotId missing");
@@ -91,12 +95,12 @@ function syncWithSpots(spots) {
 
 /* === SERVER CALLS === */
 async function fetchSpots(lotId) {
-  const r = await fetch(`${DB}/lots/${lotId}/spots`, { cache: "no-store" });
+  const r = await fetch(`/lots/${lotId}/spots`, { cache: "no-store" });
   if (!r.ok) throw new Error(`Failed to load spots: ${r.status}`);
   return r.json(); // [{id, spot_number, status, ...}]
 }
 async function fetchPlainSlots(lotId) {
-  const r = await fetch(`${DB}/lots/${lotId}/plain_slots`, { cache: "no-store" });
+  const r = await fetch(`/lots/${lotId}/plain_slots`, { cache: "no-store" });
   if (!r.ok) throw new Error(`Failed to load plain slots: ${r.status}`);
   return r.json(); // [{id, spot_id, slot_number, x, y, rotation, ...}]
 }
@@ -245,7 +249,7 @@ function buildPlainSlotsPayload() {
 async function savePlainSlots() {
   try {
     const payload = buildPlainSlotsPayload();
-    const r = await fetch(`${DB}/lots/${lotId}/plain_slots`, {
+    const r = await fetch(`/lots/${lotId}/plain_slots`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -259,18 +263,46 @@ async function savePlainSlots() {
   }
 }
 
+let statusRefreshInFlight = false;
+let lastStatusRefresh = 0;
+
 async function refreshStatusesOnly() {
+  // don't poll while user is dragging/rotating
   if (editing) return;
+
+  // don't poll if tab is hidden (saves a LOT of noise)
+  if (document.hidden) return;
+
+  // ensure only one refresh is running at a time
+  if (statusRefreshInFlight) return;
+
+  const now = Date.now();
+  const MIN_GAP = STATUS_POLL_MS * 0.8; // allow some flexibility
+
+  // if we got called "too soon", back off a bit plus jitter
+  const elapsed = now - lastStatusRefresh;
+  if (elapsed < MIN_GAP) {
+    const jitter = 500 + Math.random() * 1500; // 0.5–2s jitter
+    await sleep(MIN_GAP - elapsed + jitter);
+  }
+
+  statusRefreshInFlight = true;
   try {
+    // extra jitter before hitting the API so many clients de-sync
+    const jitterBefore = Math.random() * 2000; // 0–2s
+    await sleep(jitterBefore);
+
     const spots = await fetchSpots(lotId);
     syncWithSpots(spots);
     render();
-    // (optional) persist if boxes were added/removed:
-    // await savePlainSlots();
+    lastStatusRefresh = Date.now();
   } catch (err) {
     console.error(err);
+  } finally {
+    statusRefreshInFlight = false;
   }
 }
+
 
 
 /* === INIT === */

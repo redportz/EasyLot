@@ -1,7 +1,7 @@
 async function loadLots() {
   try {
     // Fetch your database data (could be /api/lots or local lots.json)
-    const lotPath = 'http://localhost:5001/lots'
+    const lotPath = '/lots'
     const res = await fetch(lotPath);
     const lots = await res.json();
     
@@ -38,9 +38,9 @@ async function loadLots() {
           deleteBtn.addEventListener('click', async (e) => {
             e.preventDefault();
 
-            if(confirm(`Are you sure ytou want to delete lot "${lot.name}"?`)){
+            if(confirm(`Are you sure you want to delete lot "${lot.name}"?`)){
               try{
-                const res = await fetch(`http://127.0.0.1:5001/lots/${lotId}`,{
+                const res = await fetch(`/lots/${lotId}`,{
                   method: "DELETE",
                   headers: {"Content-Type": "application/json"}
                 });

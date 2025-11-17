@@ -1,0 +1,28 @@
+:80 {
+
+        # === Static frontend (your EasyLot folder) ===
+        root * C:\Users\Owner\Documents\GitHub\EasyLot
+        file_server
+
+    # === API → Flask on 5001 ===
+    route /lots* {
+        reverse_proxy 127.0.0.1:5001
+    }
+    route /spots* {
+        reverse_proxy 127.0.0.1:5001
+    }
+    route /plain_slots* {
+        reverse_proxy 127.0.0.1:5001
+    }
+    route /live_video_feed* {
+            reverse_proxy 127.0.0.1:5001
+    }
+    # === Video/Stats → YOLO Flask on 5000 ===
+    route /video_feed* {
+        reverse_proxy 127.0.0.1:5000
+    }
+    route /stats* {
+        reverse_proxy 127.0.0.1:5000
+    }
+    
+}

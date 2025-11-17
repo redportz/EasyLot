@@ -18,7 +18,7 @@ document.getElementById("new-lot-form").addEventListener("submit", async (event)
 
 async function AddLotToList(lotName, liveUrl, upside_down, event) {
    try {
-        const res = await fetch("http://127.0.0.1:5001/lots", {
+        const res = await fetch("/lots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: lotName, live_feed_url: liveUrl, is_video_upside_down: upside_down })

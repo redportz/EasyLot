@@ -1,8 +1,8 @@
 // plain-view.js — read-only renderer matching the planner look
 
 /* === CONFIG === */
-const DB = "http://127.0.0.1:5001";
-const BACKEND = "http://127.0.0.1:5000";
+const DB = "";
+const BACKEND = "";
 const FRAME_W = 960, FRAME_H = 540;     // canvas size used by your planner
 const SLOT_W = 60,  SLOT_H = 100;       // same visual slot size as planner
 
@@ -10,26 +10,63 @@ const SLOT_W = 60,  SLOT_H = 100;       // same visual slot size as planner
 const _params = new URLSearchParams(location.search);
 const _lotId = Number(_params.get("id") || _params.get("lotId"));
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /* === FETCH HELPERS === */
 async function fetchPlainSlots(id) {
-  const r = await fetch(`${DB}/lots/${id}/plain_slots`, { cache: "no-store" });
+  const r = await fetch(`/lots/${id}/plain_slots`, { cache: "no-store" });
   if (!r.ok) throw new Error(`plain_slots ${r.status}`);
   return r.json(); // [{id, spot_id, slot_number, x, y, rotation}]
 }
+let lastStatusFetch = 0;
+let statusInFlight = null;
+
 async function fetchStatuses(id, preferBackend = true) {
-  try {
-    if (preferBackend) {
-      const r = await fetch(`${BACKEND}/stats/${id}`, { cache: "no-store" });
-      if (r.ok) {
-        const j = await r.json(); // {spots:[{spot_id,status},...]}
-        return new Map(j.spots.map(s => [s.spot_id, s.status]));
+  const MIN_GAP = 1500; // 1.5s minimum between stats calls
+  const now = Date.now();
+
+  // If we fetched too recently, wait the remaining time + jitter
+  const elapsed = now - lastStatusFetch;
+  if (elapsed < MIN_GAP) {
+    const jitter = 200 + Math.random() * 400; // 200–600 ms
+    await sleep(MIN_GAP - elapsed + jitter);
+  }
+
+  // If there’s already a stats request in flight, reuse it
+  if (statusInFlight) {
+    return statusInFlight;
+  }
+
+  statusInFlight = (async () => {
+    try {
+      if (preferBackend) {
+        try {
+          const r = await fetch(`/stats/${id}`, { cache: "no-store" });
+          if (r.ok) {
+            const j = await r.json(); // {spots:[{spot_id,status},...]}
+            lastStatusFetch = Date.now();
+            return new Map(j.spots.map((s) => [s.spot_id, s.status]));
+          }
+        } catch {
+          // fall through to DB
+        }
       }
+
+      const r = await fetch(`/lots/${id}/spots`, { cache: "no-store" });
+      if (!r.ok) throw new Error(`spots ${r.status}`);
+      const j = await r.json(); // [{id,status},...]
+      lastStatusFetch = Date.now();
+      return new Map(j.map((s) => [s.id, s.status]));
+    } finally {
+      statusInFlight = null;
     }
-  } catch {}
-  const r = await fetch(`${DB}/lots/${id}/spots`, { cache: "no-store" });
-  const j = await r.json(); // [{id,status},...]
-  return new Map(j.map(s => [s.id, s.status]));
+  })();
+
+  return statusInFlight;
 }
+
 
 /* === RENDER (READ-ONLY) === */
 window.renderPlainLot = async function renderPlainLot({
