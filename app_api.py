@@ -1,12 +1,13 @@
 import os, json, time
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, abort
 from flask_cors import CORS
 from sqlalchemy import (Boolean, create_engine, Column, Integer, String, Text, DateTime, Enum,
                         Float, ForeignKey, UniqueConstraint, func)
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy.sql import expression
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 
@@ -189,6 +190,44 @@ def list_spots(lot_id):
             }
             for sp, pg in rows
         ])
+@app.get("/live_video_feed/<int:lot_id>")
+def video_feed(lot_id):
+    #Look up the lot in the DB
+    with Session() as s:
+        lot = s.query(Lot).filter(Lot.id == lot_id).first()
+        if not lot:
+            abort(404, description=f"Lot {lot_id} not found")
+        camera_url = lot.live_feed_url
+
+    #Open a streaming HTTP connection to the camera
+    try:
+        upstream = requests.get(camera_url, stream=True, timeout=5)
+    except requests.RequestException as e:
+        app.logger.error(f"Error fetching camera stream from {camera_url}: {e}")
+        abort(502, description="Error talking to camera")
+
+    if upstream.status_code != 200:
+        app.logger.error(f"Camera returned status {upstream.status_code} for {camera_url}")
+        abort(502, description="Camera returned bad status")
+
+    #Stream the bytes straight through to the browser
+    def generate():
+        try:
+            for chunk in upstream.iter_content(chunk_size=8192):
+                if not chunk:
+                    continue
+                yield chunk
+        finally:
+            upstream.close()
+
+    content_type = upstream.headers.get(
+        "Content-Type",
+        "multipart/x-mixed-replace; boundary=frame"
+    )
+
+    return Response(generate(), content_type=content_type)
+
+
 
 # add lot spot info
 @app.put("/lots/<int:lot_id>/spots_sync")
