@@ -6,9 +6,9 @@ from ultralytics import YOLO
 import requests
 
 # ---------------- Config ----------------
-MODEL_PATH = "yolov8s.pt"
+MODEL_PATH = "EasyLots_Eyes.pt"
 FRAME_W, FRAME_H = 1280, 720
-POLL_INTERVAL = 10  # seconds between DB checks
+POLL_INTERVAL = 30  # seconds between DB checks
 API_BASE = "http://localhost:5001"  # DB API
 
 # ---------------- App ----------------
@@ -95,11 +95,15 @@ def lot_worker(lot_id, live_url):
                 "latest_jpeg": None,
                 "latest_frame": None,
                 "jpeg_lock": threading.Lock(),
-                "running": True
+                "running": True,
+                "latest_boxes": []       # <--- NEW: store detection boxes
             }
         }
 
     state = lot_workers[lot_id]["state"]
+    # if state made earlier in orchestrator, be sure it has latest_boxes
+    state.setdefault("latest_boxes", [])
+
     model = YOLO(MODEL_PATH)
     cam = ThreadedCamera(live_url, fps=30)
 
@@ -110,55 +114,97 @@ def lot_worker(lot_id, live_url):
     last_detection = 0
     detection_interval = 30  # seconds
 
+    # -------- ANCHOR-FRAME LOGIC --------
+    anchor_second = None
+    anchor_frame = None
+    LOOP_SLEEP = 1.0 / 3.0  # 3 loops per second
+
     while state["running"]:
-        frame = cam.get_frame()
-        if frame is None:
+        now = time.time()
+        current_second = int(now)
+
+        # --- Pull one frame per second ---
+        if anchor_second != current_second:
+            new_frame = cam.get_frame()
+            if new_frame is not None:
+                anchor_frame = new_frame.copy()
+            anchor_second = current_second
+
+        # No anchor frame yet → wait
+        if anchor_frame is None:
             time.sleep(0.02)
             continue
 
+        # Use anchor frame for all processing this loop
+        frame = anchor_frame.copy()
+
         if is_upside_down:
             frame = cv2.rotate(frame, cv2.ROTATE_180)
+
         frame_resized = cv2.resize(frame, (FRAME_W, FRAME_H))
 
-        # Always store the latest frame for the video feed
+        # === DRAW BOXES BEFORE ENCODING ===
         with state["jpeg_lock"]:
-            ok, jpg = cv2.imencode(".jpg", frame_resized, encode_params)
+            frame_to_send = frame_resized.copy()
+
+            # Draw last-known detections
+            for (x1, y1, x2, y2) in state.get("latest_boxes", []):
+                cv2.rectangle(frame_to_send, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            ok, jpg = cv2.imencode(".jpg", frame_to_send, encode_params)
             if ok:
                 state["latest_jpeg"] = jpg.tobytes()
+
+            # keep a clean frame for detection (can also be frame_to_send if you don't care)
             state["latest_frame"] = frame_resized.copy()
 
-        now = time.time()
-        # Update polygons every 10s
+        # Update polygons every 10 seconds
         if now - last_poly_check > 10:
             polygons, spot_ids = load_polygons_from_db(lot_id)
             is_upside_down = get_is_upside_down(lot_id)
             last_poly_check = now
 
-        # Run YOLO only every detection_interval
+        # Run YOLO only every detection_interval seconds
         if now - last_detection > detection_interval and state["latest_frame"] is not None:
             frame_for_detection = state["latest_frame"].copy()
             total_spots = len(polygons)
             filled_status = ["empty"] * total_spots
 
-            results = model.track(frame_for_detection, persist=True, classes=[2, 7], conf=0.25)
-            if results and results[0].boxes.id is not None:
+            results = model.track(
+                frame_for_detection,
+                persist=True,
+                classes=[0],
+                conf=0.20,
+                verbose=False
+            )
+
+            boxes = []
+            if results and results[0].boxes.xyxy is not None:
                 boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
-                for (x1, y1, x2, y2) in boxes:
-                    corners = [(x1, y1), (x2, y1), (x2, y2), (x1, y2), ((x1+x2)//2, (y1+y2)//2)]
-                    for i, poly in enumerate(polygons):
-                        if not poly:
-                            continue
-                        pts = np.array(poly, np.int32).reshape((-1, 1, 2))
-                        if any(cv2.pointPolygonTest(pts, (float(px), float(py)), False) >= 0 for (px, py) in corners):
-                            if filled_status[i] == "empty":
-                                filled_status[i] = "full"
+
+                # Loop through each parking spot polygon
+                for i, poly in enumerate(polygons):
+                    if not poly or len(poly) < 4:
+                        continue
+
+                    spot_is_full = False
+
+                    # Check polygon points against car boxes
+                    for (x1, y1, x2, y2) in boxes:
+                        inside_count = 0
+                        for (px, py) in poly:
+                            if x1 <= px <= x2 and y1 <= py <= y2:
+                                inside_count += 1
+
+                        if inside_count >= 2:
+                            spot_is_full = True
                             break
 
-            # Update DB
-            for i, spot_id in enumerate(spot_ids):
-                update_spot_status(spot_id, filled_status[i])
+                    filled_status[i] = "full" if spot_is_full else "empty"
 
+            # === SAVE BOXES + COUNTS INTO STATE ===
             with state["jpeg_lock"]:
+                state["latest_boxes"] = boxes      # <--- NEW: boxes used by drawer above
                 state["filled_status"] = filled_status
                 state["spot_ids"] = spot_ids
                 state["latest_counts"] = {
@@ -167,7 +213,14 @@ def lot_worker(lot_id, live_url):
                     "total": total_spots
                 }
 
+            # Push to DB
+            for i, spot_id in enumerate(spot_ids):
+                update_spot_status(spot_id, filled_status[i])
+
             last_detection = now
+
+        # Sleep so loop runs ~3 times per second
+        time.sleep(LOOP_SLEEP)
 
 # ---------------- Orchestrator ----------------
 def orchestrator():

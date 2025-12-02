@@ -21,9 +21,9 @@ document.addEventListener("DOMContentLoaded", function() {
   
   
   // Setup auto-logout timer and reset it on user interactions
-  resetLogoutTimer();
-  document.addEventListener("mousemove", resetLogoutTimer);
-  document.addEventListener("keydown", resetLogoutTimer);
+  // resetLogoutTimer();
+  // document.addEventListener("mousemove", resetLogoutTimer);
+  // document.addEventListener("keydown", resetLogoutTimer);
   
   // Logout button
   const logoutBtn = document.getElementById("logout-btn");
