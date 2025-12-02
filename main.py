@@ -6,7 +6,7 @@ from ultralytics import YOLO
 import requests
 
 # ---------------- Config ----------------
-MODEL_PATH = "model.pt"
+MODEL_PATH = "EasyLots_Eyes.pt"
 FRAME_W, FRAME_H = 1280, 720
 POLL_INTERVAL = 30  # seconds between DB checks
 API_BASE = "http://localhost:5001"  # DB API
