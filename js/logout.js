@@ -2,15 +2,15 @@
 const AUTO_LOGOUT_TIME = 2 *60* 1000; //remove the 60 to check logout timer. Will logout after 5 seconds
 let logoutTimer;
 // Function to reset the auto-logout timer
-function resetLogoutTimer() {
-  clearTimeout(logoutTimer);
-  logoutTimer = setTimeout(() => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("role");
-    alert("Session expired. Please log in again.");
-    window.location.href = "/login-page.html";
-  }, AUTO_LOGOUT_TIME);
-}
+// function resetLogoutTimer() {
+//   clearTimeout(logoutTimer);
+//   logoutTimer = setTimeout(() => {
+//     localStorage.removeItem("user");
+//     localStorage.removeItem("role");
+//     alert("Session expired. Please log in again.");
+//     window.location.href = "/login-page.html";
+//   }, AUTO_LOGOUT_TIME);
+// }
 
 document.addEventListener("DOMContentLoaded", function() {
   // Check if the user is logged in by looking for the "user" key in localStorage
@@ -21,9 +21,9 @@ document.addEventListener("DOMContentLoaded", function() {
   
   
   // Setup auto-logout timer and reset it on user interactions
-  resetLogoutTimer();
-  document.addEventListener("mousemove", resetLogoutTimer);
-  document.addEventListener("keydown", resetLogoutTimer);
+  // resetLogoutTimer();
+  // document.addEventListener("mousemove", resetLogoutTimer);
+  // document.addEventListener("keydown", resetLogoutTimer);
   
   // Logout button
   const logoutBtn = document.getElementById("logout-btn");

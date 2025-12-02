@@ -84,7 +84,6 @@ def get_is_upside_down(lot_id):
         print(f"[LOT {lot_id}] Could not fetch is_video_upside_down: {e}")
         return False
 
-
 def lot_worker(lot_id, live_url):
     print(f"[LOT {lot_id}] Starting worker for {live_url}")
 
@@ -96,11 +95,15 @@ def lot_worker(lot_id, live_url):
                 "latest_jpeg": None,
                 "latest_frame": None,
                 "jpeg_lock": threading.Lock(),
-                "running": True
+                "running": True,
+                "latest_boxes": []       # <--- NEW: store detection boxes
             }
         }
 
     state = lot_workers[lot_id]["state"]
+    # if state made earlier in orchestrator, be sure it has latest_boxes
+    state.setdefault("latest_boxes", [])
+
     model = YOLO(MODEL_PATH)
     cam = ThreadedCamera(live_url, fps=30)
 
@@ -111,7 +114,7 @@ def lot_worker(lot_id, live_url):
     last_detection = 0
     detection_interval = 30  # seconds
 
-    # -------- NEW ANCHOR-FRAME LOGIC --------
+    # -------- ANCHOR-FRAME LOGIC --------
     anchor_second = None
     anchor_frame = None
     LOOP_SLEEP = 1.0 / 3.0  # 3 loops per second
@@ -140,11 +143,19 @@ def lot_worker(lot_id, live_url):
 
         frame_resized = cv2.resize(frame, (FRAME_W, FRAME_H))
 
-        # Always store latest frame
+        # === DRAW BOXES BEFORE ENCODING ===
         with state["jpeg_lock"]:
-            ok, jpg = cv2.imencode(".jpg", frame_resized, encode_params)
+            frame_to_send = frame_resized.copy()
+
+            # Draw last-known detections
+            for (x1, y1, x2, y2) in state.get("latest_boxes", []):
+                cv2.rectangle(frame_to_send, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            ok, jpg = cv2.imencode(".jpg", frame_to_send, encode_params)
             if ok:
                 state["latest_jpeg"] = jpg.tobytes()
+
+            # keep a clean frame for detection (can also be frame_to_send if you don't care)
             state["latest_frame"] = frame_resized.copy()
 
         # Update polygons every 10 seconds
@@ -159,8 +170,15 @@ def lot_worker(lot_id, live_url):
             total_spots = len(polygons)
             filled_status = ["empty"] * total_spots
 
-            results = model.track(frame_for_detection, persist=True, classes=[0], conf=0.20)
+            results = model.track(
+                frame_for_detection,
+                persist=True,
+                classes=[0],
+                conf=0.20,
+                verbose=False
+            )
 
+            boxes = []
             if results and results[0].boxes.xyxy is not None:
                 boxes = results[0].boxes.xyxy.cpu().numpy().astype(int)
 
@@ -184,11 +202,9 @@ def lot_worker(lot_id, live_url):
 
                     filled_status[i] = "full" if spot_is_full else "empty"
 
-            # Update DB
-            for i, spot_id in enumerate(spot_ids):
-                update_spot_status(spot_id, filled_status[i])
-
+            # === SAVE BOXES + COUNTS INTO STATE ===
             with state["jpeg_lock"]:
+                state["latest_boxes"] = boxes      # <--- NEW: boxes used by drawer above
                 state["filled_status"] = filled_status
                 state["spot_ids"] = spot_ids
                 state["latest_counts"] = {
@@ -196,6 +212,10 @@ def lot_worker(lot_id, live_url):
                     "full": filled_status.count("full"),
                     "total": total_spots
                 }
+
+            # Push to DB
+            for i, spot_id in enumerate(spot_ids):
+                update_spot_status(spot_id, filled_status[i])
 
             last_detection = now
 
