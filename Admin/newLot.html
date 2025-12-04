@@ -38,6 +38,15 @@
             <input type="text" id="Lot-name" name="Lot-name" placeholder="Example parking lot"  required>
             <label for="Url">Url</label>
             <input type="url" id="Url" name="Url" placeholder="https://example.com/video_feed" required>
+            <!-- TO DO -->
+             <!-- Change it from a boolean to being able to have more then 2 options -->
+            <label>Use custom model?</label>
+            <div id="is_custom">
+                <input type="radio" id="cust_yes" name="is_custom_yes_no" value="true" required>
+                <label for="cust_yes">Yes</label>
+                <input type="radio" id="cust_no" name="is_custom_yes_no" value="false">
+                <label for="cust_no">No</label>
+            </div>
             <label>Is the video upside down?</label>
             <div id="choice">
                 <input type="radio" id="yes" name="yes_no" value="true" required>
@@ -61,7 +70,7 @@
     
     <script src="/js/auth.js"></script>
     <script src="/js/logout.js"></script>
-    <script src="/js/lotGenorator.js"></script>
+    <script src="/js/lotGenorator.js?v=2"></script>
     
 </body>
 </html>

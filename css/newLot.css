@@ -24,7 +24,7 @@ main{
     background: var(--primary-color);
     width: 500px;
     justify-self: center;
-    height: 550px;
+    height: 600px;
     display: flex;
     flex-direction: column;
     border-radius: 25px;

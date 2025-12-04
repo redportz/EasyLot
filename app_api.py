@@ -32,6 +32,7 @@ class Lot(Base):
     live_feed_url = Column(Text, nullable=False)
     is_video_upside_down = Column(Boolean, nullable=False, server_default=expression.false())
     created_at = Column(DateTime, server_default=func.now())
+    is_custom = Column(Boolean,nullable=False, server_default=expression.false())
     spots = relationship("Spot", back_populates="lot", cascade="all,delete")
     plain_slots = relationship("PlainSlot", back_populates="lot", cascade="all,delete")
 
@@ -84,6 +85,7 @@ def list_lots():
         return jsonify([{
             "id": r.id, "name": r.name,
             "live_feed_url": r.live_feed_url,
+            "is_custom": r.is_custom,
             "is_video_upside_down": bool(r.is_video_upside_down),
             "created_at": r.created_at.isoformat() if r.created_at else None
         } for r in rows])
@@ -101,6 +103,7 @@ def get_lot(lot_id):
             "name": lot.name,
             "live_feed_url": lot.live_feed_url,
             "is_video_upside_down": bool(lot.is_video_upside_down),
+            "is_custom": bool(lot.is_custom),
             "created_at": lot.created_at.isoformat() if lot.created_at else None
         }), 200
 
@@ -110,7 +113,7 @@ def create_lot():
     data = request.get_json() or {}
 
     # require all three
-    for k in ("name", "live_feed_url", "is_video_upside_down"):
+    for k in ("name", "live_feed_url", "is_video_upside_down", "is_custom"):
         if k not in data:
             return jsonify({"message": f"{k} required"}), 400
 
@@ -119,6 +122,7 @@ def create_lot():
             name=data["name"].strip(),
             live_feed_url=data["live_feed_url"].strip(),
             is_video_upside_down=data["is_video_upside_down"],
+            is_custom = data["is_custom"]
         )
         s.add(lot)
         s.commit()
@@ -140,6 +144,8 @@ def delete_lot(lot_id):
 
 
 # update a lots live feed url
+#To DO
+# add to edit lot so user can change url for the same lot feed
 @app.post("/lots/<int:lot_id>/update_url")
 def update_live_feed_url(lot_id):
     data = request.get_json() or {}
@@ -169,7 +175,7 @@ def update_live_feed_url(lot_id):
         }), 200
 
 
-   # get lots spot information
+# get lots spot information
 @app.get("/lots/<int:lot_id>/spots")
 def list_spots(lot_id):
     with Session() as s:
