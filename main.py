@@ -6,7 +6,7 @@ from ultralytics import YOLO
 import requests
 
 # ---------------- Config ----------------
-MODEL_PATH = "EasyLots_Eyes.pt"
+#MODEL_PATH = "EasyLots_Eyes.pt"
 FRAME_W, FRAME_H = 1280, 720
 POLL_INTERVAL = 30  # seconds between DB checks
 API_BASE = "http://localhost:5001"  # DB API
@@ -84,6 +84,17 @@ def get_is_upside_down(lot_id):
         print(f"[LOT {lot_id}] Could not fetch is_video_upside_down: {e}")
         return False
 
+def get_is_custom(lot_id):
+    """Fetch whether the given lot needs a custom AI model."""
+    try:
+        r = requests.get(f"{API_BASE}/lots/{lot_id}")
+        r.raise_for_status()
+        lot = r.json()
+        return bool(lot.get("is_custom", False))
+    except Exception as e:
+        print(f"[LOT {lot_id}] Could not fetch is_custom: {e}")
+        return False
+
 def lot_worker(lot_id, live_url):
     print(f"[LOT {lot_id}] Starting worker for {live_url}")
 
@@ -96,15 +107,28 @@ def lot_worker(lot_id, live_url):
                 "latest_frame": None,
                 "jpeg_lock": threading.Lock(),
                 "running": True,
-                "latest_boxes": []       # <--- NEW: store detection boxes
+                "latest_boxes": []
             }
         }
 
     state = lot_workers[lot_id]["state"]
-    # if state made earlier in orchestrator, be sure it has latest_boxes
     state.setdefault("latest_boxes", [])
 
-    model = YOLO(MODEL_PATH)
+    #model = YOLO(MODEL_PATH)
+    is_custom = get_is_custom(lot_id)
+
+
+    detection_classes = []
+
+    if is_custom == 1:
+        #custom model: EasyLots eyes
+        model = YOLO("EasyLots_Eyes.pt")
+        detection_classes = [0]
+        print("Using custom.")
+    else:
+        model = YOLO("yolov8s.pt")
+        detection_classes = [2,7]
+
     cam = ThreadedCamera(live_url, fps=30)
 
     is_upside_down = get_is_upside_down(lot_id)
@@ -173,7 +197,7 @@ def lot_worker(lot_id, live_url):
             results = model.track(
                 frame_for_detection,
                 persist=True,
-                classes=[0],
+                classes=detection_classes,
                 conf=0.20,
                 verbose=False
             )
@@ -204,7 +228,7 @@ def lot_worker(lot_id, live_url):
 
             # === SAVE BOXES + COUNTS INTO STATE ===
             with state["jpeg_lock"]:
-                state["latest_boxes"] = boxes      # <--- NEW: boxes used by drawer above
+                state["latest_boxes"] = boxes
                 state["filled_status"] = filled_status
                 state["spot_ids"] = spot_ids
                 state["latest_counts"] = {
@@ -230,6 +254,7 @@ def orchestrator():
             for lot in lots:
                 lot_id = lot["id"]
                 live_url = lot["live_feed_url"]
+                is_custom = lot["is_custom"]
                 if lot_id not in lot_workers:
                     lot_workers[lot_id] = {
                         "thread": None,
